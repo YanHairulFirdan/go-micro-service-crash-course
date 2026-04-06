@@ -3,7 +3,7 @@ title: Pendahuluan
 sidebar_position: 2
 slug: /intro
 pagination_prev: instalasi-software
-pagination_next: hari-1/setup-product-service
+pagination_next: glosarium
 ---
 
 # Pendahuluan & Arsitektur
@@ -11,6 +11,24 @@ pagination_next: hari-1/setup-product-service
 ## Gambaran Sistem
 
 Panduan ini membangun sistem e-commerce sederhana terdiri dari tiga repository terpisah yang berkomunikasi satu sama lain. Setiap service berjalan independen, bisa dideploy secara terpisah, dan berkomunikasi melalui dua protokol: gRPC untuk komunikasi sinkron antar-service, dan Kafka untuk event streaming asinkron.
+
+## Tentang Proyek Ini
+
+Proyek yang dibangun di course ini adalah backend e-commerce sederhana dengan fokus pada alur bisnis inti, bukan pada fitur frontend. Pembaca akan membuat beberapa service kecil yang masing-masing punya tanggung jawab jelas:
+
+- `product-service` untuk menyimpan data produk dan stok
+- `order-service` untuk membuat order dan memvalidasi stok
+- `api-gateway` untuk menjadi pintu masuk semua HTTP request dari client
+- `proto-definitions` untuk menyimpan kontrak `.proto` yang dipakai bersama
+
+Tujuan course ini bukan hanya menghasilkan aplikasi yang berjalan, tetapi juga memperkenalkan cara berpikir microservices secara praktis:
+
+- memisahkan tanggung jawab per service
+- memakai kontrak data yang eksplisit
+- membedakan komunikasi sinkron dan asinkron
+- menyiapkan deployment yang lebih realistis dengan Docker Compose
+
+Di akhir course, kamu akan punya satu sistem kecil yang sudah mencakup banyak konsep inti backend modern: REST API, gRPC, Kafka, API Gateway, database terpisah, dan containerization.
 
 |     | Service             | Port HTTP | Port gRPC | Keterangan                 |
 | --- | ------------------- | --------- | --------- | -------------------------- |
@@ -129,5 +147,9 @@ GitHub / GitLab:
 | **1** | Product Service          | Go Modules · Fiber · GORM · PostgreSQL · REST API                      |
 | **2** | Order Service & Protobuf | Order Service · Schema `.proto` · Kompilasi Protobuf · Git Submodules  |
 | **3** | Implementasi gRPC        | gRPC Server (Product) · gRPC Client (Order) · Komunikasi Antar Service |
+| **4** | Kafka Event Streaming    | Producer · Consumer · Sinkronisasi stok via event                      |
+| **5** | API Gateway              | Reverse proxy · Routing masuk · Single entry point                     |
+| **6** | Docker Compose           | Build image · Multi-stage Dockerfile · Orchestration                   |
+| **7** | Integrasi & Testing      | End-to-end flow · Health checks · Troubleshooting                      |
 
 Hari pertama kita membangun fondasi: Product Service yang menyediakan CRUD sederhana untuk data produk. Ini adalah service pertama dan paling fundamental dalam sistem kita.

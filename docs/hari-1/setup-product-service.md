@@ -1,7 +1,7 @@
 ---
 title: Setup Product Service
 sidebar_position: 1
-pagination_prev: intro
+pagination_prev: glosarium
 pagination_next: hari-2/order-service-protobuf
 ---
 
