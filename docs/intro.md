@@ -30,6 +30,19 @@ Tujuan course ini bukan hanya menghasilkan aplikasi yang berjalan, tetapi juga m
 
 Di akhir course, kamu akan punya satu sistem kecil yang sudah mencakup banyak konsep inti backend modern: REST API, gRPC, Kafka, API Gateway, database terpisah, dan containerization.
 
+## Hasil Akhir yang Diharapkan
+
+Setelah seluruh materi selesai, sistem yang kamu bangun seharusnya mampu menjalankan alur berikut:
+
+1. client mengirim request ke API Gateway
+2. Gateway meneruskan request ke service yang sesuai
+3. Order Service memanggil Product Service via gRPC untuk validasi stok
+4. setelah order dibuat, event dikirim ke Kafka
+5. Product Service menerima event tersebut dan memperbarui stok
+6. semua service dapat dijalankan bersama melalui Docker Compose
+
+Dengan kata lain, pembaca tidak hanya belajar potongan-potongan teknis, tetapi membangun satu sistem end-to-end yang saling terhubung.
+
 |     | Service             | Port HTTP | Port gRPC | Keterangan                 |
 | --- | ------------------- | --------- | --------- | -------------------------- |
 | 🛍️  | **Product Service** | `:8081`   | `:9091`   | Manajemen produk & stok    |
