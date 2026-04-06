@@ -1,0 +1,9 @@
+{
+  "label": "Hari 2",
+  "position": 4,
+  "link": {
+    "type": "generated-index",
+    "title": "Hari 2",
+    "description": "Menyiapkan order service dan schema protobuf."
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "label": "Hari 1",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "title": "Hari 1",
+    "description": "Membangun product service pertama dengan Fiber dan GORM."
+  }
+}

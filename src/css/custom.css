@@ -1,0 +1,55 @@
+:root {
+  --ifm-color-primary: #0f766e;
+  --ifm-color-primary-dark: #0b5f59;
+  --ifm-color-primary-darker: #0a5650;
+  --ifm-color-primary-darkest: #08453f;
+  --ifm-color-primary-light: #13877e;
+  --ifm-color-primary-lighter: #189588;
+  --ifm-color-primary-lightest: #23a99c;
+  --ifm-background-color: #f7f7f2;
+  --ifm-font-family-base: "Source Sans 3", system-ui, sans-serif;
+  --ifm-heading-font-family: "IBM Plex Sans", system-ui, sans-serif;
+}
+
+body {
+  background:
+    radial-gradient(circle at top left, rgba(15, 118, 110, 0.12), transparent 28%),
+    linear-gradient(180deg, #f7f7f2 0%, #fcfcf8 100%);
+}
+
+.hero {
+  min-height: calc(100vh - 60px);
+  display: grid;
+  place-items: center;
+}
+
+.hero__inner {
+  max-width: 760px;
+  text-align: left;
+  padding: 4rem 1rem;
+}
+
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-size: 0.9rem;
+  color: var(--ifm-color-primary-dark);
+}
+
+.hero h1 {
+  font-size: clamp(2.6rem, 7vw, 4.8rem);
+  line-height: 0.98;
+  margin-bottom: 1rem;
+}
+
+.lead {
+  font-size: 1.15rem;
+  max-width: 42rem;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1.5rem;
+}
