@@ -2,8 +2,6 @@
 title: Instalasi
 sidebar_position: 1
 slug: /getting-started/instalasi
-pagination_prev: index
-pagination_next: getting-started/pengenalan
 ---
 
 # Instalasi Software yang Diperlukan

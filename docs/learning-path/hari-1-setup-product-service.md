@@ -2,7 +2,6 @@
 title: Setup Product Service
 sidebar_position: 1
 slug: /learning-path/hari-1-setup-product-service
-pagination_prev: reference/glosarium
 pagination_next: learning-path/hari-2-order-service-protobuf
 ---
 
