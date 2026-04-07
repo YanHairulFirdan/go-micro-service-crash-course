@@ -3,7 +3,7 @@ title: Pengenalan
 sidebar_position: 2
 slug: /getting-started/pengenalan
 pagination_prev: getting-started/instalasi
-pagination_next: reference/glosarium
+pagination_next: learning-path/hari-1-setup-product-service
 ---
 
 # Pendahuluan & Arsitektur

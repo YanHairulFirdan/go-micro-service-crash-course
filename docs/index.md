@@ -36,14 +36,17 @@ Setelah menyelesaikan course ini, kamu akan memahami:
 
 1. [Instalasi Software](/docs/getting-started/instalasi)
 2. [Pendahuluan dan Arsitektur](/docs/getting-started/pengenalan)
-3. [Glosarium](/docs/reference/glosarium)
-4. [Hari 1: Setup Product Service](/docs/learning-path/hari-1-setup-product-service)
-5. [Hari 2: Order Service dan Protobuf](/docs/learning-path/hari-2-order-service-protobuf)
-6. [Hari 3: gRPC Communication](/docs/learning-path/hari-3-grpc-communication)
-7. [Hari 4: Kafka Event Streaming](/docs/learning-path/hari-4-kafka-event-streaming)
-8. [Hari 5: API Gateway](/docs/learning-path/hari-5-api-gateway)
-9. [Hari 6: Docker Compose](/docs/learning-path/hari-6-docker-compose)
-10. [Hari 7: Integrasi dan Testing](/docs/learning-path/hari-7-integrasi-testing)
+3. [Hari 1: Setup Product Service](/docs/learning-path/hari-1-setup-product-service)
+4. [Hari 2: Order Service dan Protobuf](/docs/learning-path/hari-2-order-service-protobuf)
+5. [Hari 3: gRPC Communication](/docs/learning-path/hari-3-grpc-communication)
+6. [Hari 4: Kafka Event Streaming](/docs/learning-path/hari-4-kafka-event-streaming)
+7. [Hari 5: API Gateway](/docs/learning-path/hari-5-api-gateway)
+8. [Hari 6: Docker Compose](/docs/learning-path/hari-6-docker-compose)
+9. [Hari 7: Integrasi dan Testing](/docs/learning-path/hari-7-integrasi-testing)
+
+## Referensi Pendamping
+
+Kalau menemukan istilah yang belum familiar saat mengikuti materi utama, buka [Glosarium](/docs/reference/glosarium).
 
 ## Materi Inti
 

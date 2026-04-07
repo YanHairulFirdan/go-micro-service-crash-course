@@ -2,8 +2,7 @@
 title: Glosarium
 sidebar_position: 1
 slug: /reference/glosarium
-pagination_prev: getting-started/pengenalan
-pagination_next: learning-path/hari-1-setup-product-service
+pagination_prev: learning-path/hari-7-integrasi-testing
 ---
 
 # Glosarium
