@@ -6,7 +6,8 @@
     "start": "docusaurus start",
     "build": "docusaurus build",
     "serve": "docusaurus serve",
-    "clear": "docusaurus clear"
+    "clear": "docusaurus clear",
+    "test:dark-theme": "node scripts/check-dark-theme-css.mjs"
   },
   "dependencies": {
     "@docusaurus/core": "3.9.2",
