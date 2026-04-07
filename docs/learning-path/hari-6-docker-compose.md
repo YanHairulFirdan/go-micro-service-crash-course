@@ -1,8 +1,9 @@
 ---
 title: Docker Compose dan Containerization
-sidebar_position: 1
-pagination_prev: hari-5/api-gateway
-pagination_next: hari-7/integrasi-testing
+sidebar_position: 6
+slug: /learning-path/hari-6-docker-compose
+pagination_prev: learning-path/hari-5-api-gateway
+pagination_next: learning-path/hari-7-integrasi-testing
 ---
 
 # Hari 6 — Docker Compose & Containerization

@@ -1,9 +1,9 @@
 ---
 title: Glosarium
-sidebar_position: 3
-slug: /glosarium
-pagination_prev: intro
-pagination_next: hari-1/setup-product-service
+sidebar_position: 1
+slug: /reference/glosarium
+pagination_prev: getting-started/pengenalan
+pagination_next: learning-path/hari-1-setup-product-service
 ---
 
 # Glosarium

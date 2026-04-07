@@ -1,8 +1,9 @@
 ---
 title: gRPC Communication
-sidebar_position: 1
-pagination_prev: hari-2/order-service-protobuf
-pagination_next: hari-4/kafka-event-streaming
+sidebar_position: 3
+slug: /learning-path/hari-3-grpc-communication
+pagination_prev: learning-path/hari-2-order-service-protobuf
+pagination_next: learning-path/hari-4-kafka-event-streaming
 ---
 
 # Hari 3 — Implementasi gRPC

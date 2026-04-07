@@ -1,8 +1,9 @@
 ---
 title: Setup Product Service
 sidebar_position: 1
-pagination_prev: glosarium
-pagination_next: hari-2/order-service-protobuf
+slug: /learning-path/hari-1-setup-product-service
+pagination_prev: reference/glosarium
+pagination_next: learning-path/hari-2-order-service-protobuf
 ---
 
 # Hari 1 — Setup Product Service

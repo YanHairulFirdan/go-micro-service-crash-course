@@ -1,8 +1,9 @@
 ---
 title: Kafka Event Streaming
-sidebar_position: 1
-pagination_prev: hari-3/grpc-communication
-pagination_next: hari-5/api-gateway
+sidebar_position: 4
+slug: /learning-path/hari-4-kafka-event-streaming
+pagination_prev: learning-path/hari-3-grpc-communication
+pagination_next: learning-path/hari-5-api-gateway
 ---
 
 # Hari 4 — Kafka Event Streaming

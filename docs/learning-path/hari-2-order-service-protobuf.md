@@ -1,8 +1,9 @@
 ---
 title: Order Service dan Protobuf
-sidebar_position: 1
-pagination_prev: hari-1/setup-product-service
-pagination_next: hari-3/grpc-communication
+sidebar_position: 2
+slug: /learning-path/hari-2-order-service-protobuf
+pagination_prev: learning-path/hari-1-setup-product-service
+pagination_next: learning-path/hari-3-grpc-communication
 ---
 
 # Hari 2 — Order Service & Protobuf

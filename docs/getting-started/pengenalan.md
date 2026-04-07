@@ -1,9 +1,9 @@
 ---
-title: Pendahuluan
-sidebar_position: 2
-slug: /intro
-pagination_prev: instalasi-software
-pagination_next: glosarium
+title: Pengenalan
+sidebar_position: 1
+slug: /getting-started/pengenalan
+pagination_prev: getting-started/instalasi
+pagination_next: reference/glosarium
 ---
 
 # Pendahuluan & Arsitektur

@@ -1,7 +1,8 @@
 ---
 title: Integrasi dan Testing
-sidebar_position: 1
-pagination_prev: hari-6/docker-compose
+sidebar_position: 7
+slug: /learning-path/hari-7-integrasi-testing
+pagination_prev: learning-path/hari-6-docker-compose
 ---
 
 # Hari 7 — Integrasi & Testing

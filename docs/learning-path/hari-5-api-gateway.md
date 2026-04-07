@@ -1,8 +1,9 @@
 ---
 title: API Gateway
-sidebar_position: 1
-pagination_prev: hari-4/kafka-event-streaming
-pagination_next: hari-6/docker-compose
+sidebar_position: 5
+slug: /learning-path/hari-5-api-gateway
+pagination_prev: learning-path/hari-4-kafka-event-streaming
+pagination_next: learning-path/hari-6-docker-compose
 ---
 
 # Hari 5 — API Gateway
