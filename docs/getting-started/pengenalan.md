@@ -1,6 +1,6 @@
 ---
 title: Pengenalan
-sidebar_position: 1
+sidebar_position: 2
 slug: /getting-started/pengenalan
 pagination_prev: getting-started/instalasi
 pagination_next: reference/glosarium

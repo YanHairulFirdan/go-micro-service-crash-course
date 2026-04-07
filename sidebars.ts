@@ -14,13 +14,13 @@ const sidebars: SidebarsConfig = {
       items: [
         {
           type: 'doc',
-          id: 'getting-started/pengenalan',
-          label: 'Pengenalan',
+          id: 'getting-started/instalasi',
+          label: 'Instalasi',
         },
         {
           type: 'doc',
-          id: 'getting-started/instalasi',
-          label: 'Instalasi',
+          id: 'getting-started/pengenalan',
+          label: 'Pengenalan',
         },
       ],
     },

@@ -42,13 +42,13 @@ const config: Config = {
           position: 'left',
         },
         {
-          to: '/docs/getting-started/pengenalan',
-          label: 'Pengenalan',
+          to: '/docs/getting-started/instalasi',
+          label: 'Instalasi',
           position: 'left',
         },
         {
-          to: '/docs/getting-started/instalasi',
-          label: 'Instalasi',
+          to: '/docs/getting-started/pengenalan',
+          label: 'Pengenalan',
           position: 'left',
         },
         {
@@ -74,12 +74,12 @@ const config: Config = {
               to: '/docs',
             },
             {
-              label: 'Pengenalan',
-              to: '/docs/getting-started/pengenalan',
-            },
-            {
               label: 'Instalasi',
               to: '/docs/getting-started/instalasi',
+            },
+            {
+              label: 'Pengenalan',
+              to: '/docs/getting-started/pengenalan',
             },
             {
               label: 'Learning Path',
