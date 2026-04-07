@@ -1,9 +1,0 @@
-{
-  "label": "Hari 3",
-  "position": 5,
-  "link": {
-    "type": "generated-index",
-    "title": "Hari 3",
-    "description": "Integrasi gRPC antar-service."
-  }
-}
