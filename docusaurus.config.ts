@@ -42,13 +42,23 @@ const config: Config = {
           position: 'left',
         },
         {
-          to: '/docs/intro',
-          label: 'Arsitektur',
+          to: '/docs/getting-started/pengenalan',
+          label: 'Pengenalan',
           position: 'left',
         },
         {
-          to: '/docs/hari-1/setup-product-service',
-          label: 'Course',
+          to: '/docs/getting-started/instalasi',
+          label: 'Instalasi',
+          position: 'left',
+        },
+        {
+          to: '/docs/category/learning-path',
+          label: 'Learning Path',
+          position: 'left',
+        },
+        {
+          to: '/docs/category/reference',
+          label: 'Reference',
           position: 'left',
         },
       ],
@@ -60,12 +70,24 @@ const config: Config = {
           title: 'Docs',
           items: [
             {
-              label: 'Instalasi',
-              to: '/docs/instalasi',
+              label: 'Mulai',
+              to: '/docs',
             },
             {
-              label: 'Pendahuluan',
-              to: '/docs/intro',
+              label: 'Pengenalan',
+              to: '/docs/getting-started/pengenalan',
+            },
+            {
+              label: 'Instalasi',
+              to: '/docs/getting-started/instalasi',
+            },
+            {
+              label: 'Learning Path',
+              to: '/docs/category/learning-path',
+            },
+            {
+              label: 'Reference',
+              to: '/docs/category/reference',
             },
           ],
         },

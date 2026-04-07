@@ -13,7 +13,9 @@ export default function Home(): JSX.Element {
           praktis.
         </p>
         <div className="actions">
-          <Link className="button button--primary button--lg" to="/docs/instalasi">
+          <Link
+            className="button button--primary button--lg"
+            to="/docs/getting-started/instalasi">
             Mulai dari Instalasi
           </Link>
           <Link className="button button--secondary button--lg" to="/docs">
