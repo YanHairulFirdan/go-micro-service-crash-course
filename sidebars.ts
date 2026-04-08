@@ -73,6 +73,33 @@ const sidebars: SidebarsConfig = {
     },
     {
       type: 'category',
+      label: 'Materi Tambahan',
+      link: {
+        type: 'generated-index',
+        title: 'Materi Tambahan',
+        description:
+          'Topik lanjutan yang melengkapi fondasi microservices utama tanpa mengubah jalur belajar 7 hari inti.',
+      },
+      items: [
+        {
+          type: 'doc',
+          id: 'supplemental/auth-jwt-overview',
+          label: 'Autentikasi JWT: Gambaran Umum',
+        },
+        {
+          type: 'doc',
+          id: 'supplemental/auth-service-login-jwt',
+          label: 'Auth Service: Login dan JWT',
+        },
+        {
+          type: 'doc',
+          id: 'supplemental/api-gateway-jwt-verification',
+          label: 'API Gateway: Verifikasi JWT',
+        },
+      ],
+    },
+    {
+      type: 'category',
       label: 'Reference',
       link: {
         type: 'generated-index',

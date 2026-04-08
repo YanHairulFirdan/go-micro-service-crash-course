@@ -2,7 +2,7 @@
 title: Glosarium
 sidebar_position: 1
 slug: /reference/glosarium
-pagination_prev: learning-path/hari-7-integrasi-testing
+pagination_prev: supplemental/api-gateway-jwt-verification
 ---
 
 # Glosarium
