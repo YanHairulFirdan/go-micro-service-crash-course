@@ -65,7 +65,8 @@ func (s *ProductGRPCServer) CheckStock(ctx context.Context, req *pb.CheckStockRe
     }, nil
 }
 
-// UpdateStock dipanggil oleh Order Service setelah order confirmed
+// DecreaseStock tidak dipanggil langsung dari Order Service.
+// Pengurangan stok akan dipicu lewat event order.created di Hari 4.
 func (s *ProductGRPCServer) UpdateStock(ctx context.Context, req *pb.UpdateStockRequest) (*pb.UpdateStockResponse, error) {
     err := s.productSvc.CheckAndUpdateStock(uint(req.ProductId), int(req.Quantity))
     if err != nil {
@@ -306,19 +307,21 @@ func (s *orderService) CreateOrder(req *model.CreateOrderRequest) (*model.Order,
     totalPrice := productDetail.Price * float64(req.Quantity)
 
     // LANGKAH 4: Simpan order ke database
+    // Pada materi ini order langsung dianggap confirmed setelah stok lolos validasi.
     order := &model.Order{
         ProductID:  req.ProductID,
         Quantity:   req.Quantity,
         TotalPrice: totalPrice,
-        Status:     model.StatusPending,
+        Status:     model.StatusConfirmed,
     }
 
     if err := s.repo.Create(order); err != nil {
         return nil, errors.New("gagal menyimpan order")
     }
 
-    // CATATAN: Update stok akan dilakukan via Kafka (Hari 4)
-    // Ini adalah pola saga pattern: kompensasi jika gagal
+    // CATATAN: Sampai titik ini stok belum dikurangi.
+    // Pada Hari 4, order-service akan publish event order.created ke Kafka,
+    // lalu product-service yang mengurangi stok secara asynchronous.
     return order, nil
 }
 
@@ -516,4 +519,4 @@ func main() {
 
 **Cakupan:** Producer · Consumer · Event-Driven Architecture · Async Processing
 
-Kafka digunakan untuk komunikasi asinkron. Ketika order dibuat, Order Service mempublish event ke Kafka. Product Service yang subscribe ke topic tersebut akan otomatis mengurangi stok tanpa Order Service perlu menunggu. Ini adalah pola event-driven yang sangat populer di microservices.
+Kafka digunakan untuk komunikasi asinkron. Ketika order berhasil disimpan, `order-service` akan mempublish event `order.created` ke Kafka. `product-service` mengonsumsi event itu untuk mengurangi stok tanpa membuat `order-service` menunggu. Ini adalah pola event-driven yang sangat populer di microservices.

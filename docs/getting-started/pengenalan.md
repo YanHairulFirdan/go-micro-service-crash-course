@@ -35,8 +35,8 @@ Setelah seluruh materi selesai, sistem yang kamu bangun seharusnya mampu menjala
 1. client mengirim request ke API Gateway
 2. Gateway meneruskan request ke service yang sesuai
 3. Order Service memanggil Product Service via gRPC untuk validasi stok
-4. setelah order dibuat, event dikirim ke Kafka
-5. Product Service menerima event tersebut dan memperbarui stok
+4. setelah order berhasil dibuat, `order-service` mengirim event `order.created` ke Kafka
+5. `product-service` menerima event `order.created` tersebut dan mengurangi stok
 6. semua service dapat dijalankan bersama melalui Docker Compose
 
 Dengan kata lain, pembaca tidak hanya belajar potongan-potongan teknis, tetapi membangun satu sistem end-to-end yang saling terhubung.
@@ -67,10 +67,11 @@ API Gateway :8080  (Fiber — repo: api-gateway)
                                      │   (validasi stok sebelum buat order)
                                      │
                                      └── Kafka Producer  ──►  Topic: order-events
+                                                        event: order.created
                                                                       │
                                                                Kafka Consumer
                                                               (Product Service)
-                                                               (update stok)
+                                                               (decrease stock)
 ```
 
 ---

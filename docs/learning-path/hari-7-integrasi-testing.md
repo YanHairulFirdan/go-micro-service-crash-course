@@ -58,7 +58,7 @@ echo '=== 2. Lihat Semua Produk ==='
 curl -s $BASE_URL/products | python3 -m json.tool
 echo ''
 
-echo '=== 3. Buat Order (gRPC + Kafka akan terpicu) ==='
+echo '=== 3. Buat Order (gRPC validasi stok, lalu event order.created dipublish) ==='
 ORDER=$(curl -s -X POST $BASE_URL/orders \
   -H 'Content-Type: application/json' \
   -d "{\"product_id\":$PRODUCT_ID,\"quantity\":2}")
@@ -66,8 +66,8 @@ echo $ORDER
 ORDER_ID=$(echo $ORDER | grep -o '"id":[0-9]*' | head -1 | grep -o '[0-9]*')
 echo ''
 
-echo '=== 4. Cek Stok Produk (harus berkurang dari 5 → 3) ==='
-sleep 1  # Tunggu Kafka consumer proses event
+echo '=== 4. Cek Stok Produk (harus berkurang dari 5 → 3 setelah event order.created diproses) ==='
+sleep 1  # Tunggu product-service consume event order.created
 curl -s $BASE_URL/products/$PRODUCT_ID | python3 -m json.tool
 echo ''
 
@@ -90,13 +90,14 @@ echo '=== Test Selesai! ==='
 
 ```bash
 # Monitor log Kafka consumer (Product Service)
-# Perhatikan log ketika ada order masuk
+# Perhatikan log ketika event order.created diterima
 docker compose logs -f product-service | grep -E 'Kafka|event|stok'
 
 # Monitor gRPC calls
 docker compose logs -f order-service | grep -E 'gRPC|CheckStock|GetProduct'
 
 # Cek messages di Kafka topic
+# Pastikan payload memuat event_name=order.created
 docker exec kafka kafka-console-consumer \
   --bootstrap-server localhost:9092 \
   --topic order-events \
@@ -124,7 +125,7 @@ docker exec -it postgres-order psql -U postgres -d order_db \
 | -------------------------------- | --------------------------------------------- | ------------------------------------------------------------------------------- |
 | **Container crash saat startup** | DB belum siap ketika service start            | Tambahkan `depends_on` dengan `healthcheck`, atau tambahkan retry logic di kode |
 | **gRPC connection refused**      | Product service belum running atau port salah | Cek `PRODUCT_GRPC_ADDR` env var, pastikan format `host:port` tanpa `http://`    |
-| **Kafka consumer tidak proses**  | Group ID conflict atau topic belum ada        | Cek `AllowAutoTopicCreation: true`, pastikan `GroupID` unik per service         |
+| **Kafka consumer tidak proses**  | Group ID conflict, topic belum ada, atau payload event salah | Cek topic `order-events`, pastikan producer mengirim `event_name: order.created`, lalu cek `GroupID` consumer |
 | **API Gateway 502 Bad Gateway**  | Downstream service tidak merespons            | Cek service running: `docker compose ps`, cek URL env var                       |
 | **Git submodule kosong**         | Lupa `--recurse-submodules` saat clone        | Jalankan: `git submodule init && git submodule update`                          |
 | **go.sum mismatch**              | Dependency berubah tapi go.sum tidak diupdate | Jalankan: `go mod tidy`                                                         |
@@ -141,7 +142,7 @@ docker exec -it postgres-order psql -U postgres -d order_db \
 | ✓   | **API Gateway**     | Single entry point, routing ke downstream, Fiber proxy, CORS                |
 | ✓   | **Protobuf**        | Schema `.proto` untuk Product & Order service, dikompilasi ke Go code       |
 | ✓   | **gRPC**            | Server di Product, Client di Order, komunikasi sinkron antar-service        |
-| ✓   | **Kafka**           | Topic `order-events`, Producer di Order, Consumer di Product (update stok)  |
+| ✓   | **Kafka**           | Topic `order-events`, event `order.created`, Producer di Order, Consumer di Product (decrease stock) |
 | ✓   | **Docker Compose**  | 8 container (2 PG, Kafka, Zookeeper, 3 service), 1 network, healthchecks    |
 | ✓   | **Git Submodules**  | `proto-definitions` sebagai submodule di product-service dan order-service  |
 | ✓   | **Separated Repos** | 4 repository Git terpisah tanpa monorepo                                    |

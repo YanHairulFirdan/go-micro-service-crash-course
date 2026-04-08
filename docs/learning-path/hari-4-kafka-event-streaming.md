@@ -12,14 +12,18 @@ pagination_next: learning-path/hari-5-api-gateway
 
 ## 4.1 Konsep Kafka dalam Sistem Kita
 
+Setelah Hari 3, order sudah bisa dibuat tetapi stok belum berkurang. Hari ini kita menambahkan trigger asynchronous yang sama seperti pada panduan NestJS: setelah order tersimpan, `order-service` mempublish event `order.created`, lalu `product-service` memproses event itu untuk mengurangi stok.
+
 ```
 Order Service          Kafka Broker            Product Service
       │                     │                        │
       │── Publish ─────────►│  Topic: order-events   │
-      │   {order_id,        │                        │
+      │   {event_name:      │                        │
+      │    order.created,   │                        │
+      │    order_id,        │                        │
       │    product_id,      │──── Consume ──────────►│
       │    quantity,        │                        │
-      │    status}          │                   Update stok di DB
+      │    status}          │                   Kurangi stok di DB
       │                     │
       │ (tidak menunggu)
       ▼
@@ -27,6 +31,7 @@ Order Service          Kafka Broker            Product Service
  ke client
 
 Topic: order-events
+Trigger stok: event `order.created`
 Partition: 1  (untuk simplisitas)
 Message Key: order_id  (agar ordered per order)
 ```
@@ -57,6 +62,14 @@ type OrderProducer struct {
     writer *kafka.Writer
 }
 
+type OrderEventPayload struct {
+    EventName string `json:"event_name"`
+    OrderID   uint   `json:"order_id"`
+    ProductID uint   `json:"product_id"`
+    Quantity  int    `json:"quantity"`
+    Status    string `json:"status"`
+}
+
 func NewOrderProducer(brokerAddr string) *OrderProducer {
     writer := &kafka.Writer{
         Addr:     kafka.TCP(brokerAddr),
@@ -68,7 +81,7 @@ func NewOrderProducer(brokerAddr string) *OrderProducer {
     return &OrderProducer{writer: writer}
 }
 
-func (p *OrderProducer) PublishOrderEvent(event model.OrderEvent) error {
+func (p *OrderProducer) PublishOrderCreated(event OrderEventPayload) error {
     payload, err := json.Marshal(event)
     if err != nil {
         return fmt.Errorf("gagal marshal event: %w", err)
@@ -85,8 +98,8 @@ func (p *OrderProducer) PublishOrderEvent(event model.OrderEvent) error {
         return fmt.Errorf("gagal publish ke kafka: %w", err)
     }
 
-    log.Printf("Event published: OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
-        event.OrderID, event.ProductID, event.Quantity, event.Status)
+    log.Printf("Event published: %s OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
+        event.EventName, event.OrderID, event.ProductID, event.Quantity, event.Status)
 
     return nil
 }
@@ -145,30 +158,35 @@ func (s *orderService) CreateOrder(req *model.CreateOrderRequest) (*model.Order,
     }
 
     // 3. Buat order
+    // Karena stok sudah lolos validasi sinkron via gRPC,
+    // order langsung disimpan sebagai confirmed.
     order := &model.Order{
         ProductID:  req.ProductID,
         Quantity:   req.Quantity,
         TotalPrice: productDetail.Price * float64(req.Quantity),
-        Status:     model.StatusPending,
+        Status:     model.StatusConfirmed,
     }
 
     if err := s.repo.Create(order); err != nil {
         return nil, errors.New("gagal simpan order")
     }
 
-    // 4. Publish event ke Kafka (ASYNC - tidak blocking)
-    event := model.OrderEvent{
+    // 4. Publish event order.created ke Kafka setelah order tersimpan
+    event := kafkapkg.OrderEventPayload{
+        EventName: "order.created",
         OrderID:   order.ID,
         ProductID: order.ProductID,
         Quantity:  order.Quantity,
-        Status:    model.StatusConfirmed,
+        Status:    string(order.Status),
     }
 
     // Publish di goroutine agar tidak blocking response
     go func() {
-        if err := s.producer.PublishOrderEvent(event); err != nil {
+        if err := s.producer.PublishOrderCreated(event); err != nil {
             // Log error tapi jangan gagalkan order
             // Di production: retry logic atau dead letter queue
+            // `_ = err` artinya nilai error sengaja diabaikan setelah titik ini,
+            // supaya compiler tahu perilaku ini memang disengaja.
             _ = err
         }
     }()
@@ -198,6 +216,7 @@ import (
 const TopicOrderEvents = "order-events"
 
 type OrderEventPayload struct {
+    EventName string `json:"event_name"`
     OrderID   uint   `json:"order_id"`
     ProductID uint   `json:"product_id"`
     Quantity  int    `json:"quantity"`
@@ -244,11 +263,11 @@ func (c *OrderConsumer) StartConsuming(ctx context.Context) {
                 continue
             }
 
-            log.Printf("Terima event: OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
-                event.OrderID, event.ProductID, event.Quantity, event.Status)
+            log.Printf("Terima event: %s OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
+                event.EventName, event.OrderID, event.ProductID, event.Quantity, event.Status)
 
-            // Proses: kurangi stok
-            if event.Status == "confirmed" {
+            // Trigger pengurangan stok ditentukan oleh nama event.
+            if event.EventName == "order.created" {
                 if err := c.productSvc.CheckAndUpdateStock(event.ProductID, event.Quantity); err != nil {
                     log.Printf("Gagal update stok untuk OrderID=%d: %v", event.OrderID, err)
                     // Di production: kirim ke dead letter topic atau alert
@@ -290,7 +309,7 @@ go consumer.StartConsuming(ctx)
 
 ---
 
-> **✅ Checkpoint Hari 4:** Order Service publish event ke Kafka ketika order dibuat. Product Service consume event tersebut dan update stok secara asinkron. Ini adalah pola event-driven yang decoupled.
+> **✅ Checkpoint Hari 4:** Setelah order berhasil disimpan, `order-service` publish event `order.created` ke Kafka. `product-service` consume event tersebut dan mengurangi stok secara asinkron. Ini adalah pola event-driven yang decoupled.
 
 ---
 
