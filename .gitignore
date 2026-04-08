@@ -3,6 +3,7 @@ node_modules
 build
 .cache-loader
 dist
+.worktrees
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
