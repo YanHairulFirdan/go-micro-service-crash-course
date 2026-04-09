@@ -2,7 +2,7 @@
 title: Glosarium
 sidebar_position: 1
 slug: /reference/glosarium
-pagination_prev: supplemental/api-gateway-jwt-verification
+pagination_prev: supplemental/database-migration
 ---
 
 # Glosarium

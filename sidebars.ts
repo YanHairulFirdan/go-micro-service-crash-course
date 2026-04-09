@@ -82,19 +82,75 @@ const sidebars: SidebarsConfig = {
       },
       items: [
         {
-          type: 'doc',
-          id: 'supplemental/auth-jwt-overview',
-          label: 'Autentikasi JWT: Gambaran Umum',
+          type: 'category',
+          label: 'Foundations',
+          link: {
+            type: 'generated-index',
+            title: 'Foundations',
+            description:
+              'Fondasi tambahan sebelum masuk ke keamanan dan operasional, dimulai dari konfigurasi aplikasi dan validasi request.',
+          },
+          items: [
+            {
+              type: 'doc',
+              id: 'supplemental/environment-management',
+              label: 'Environment Management',
+            },
+            {
+              type: 'doc',
+              id: 'supplemental/request-validation',
+              label: 'Request Validation',
+            },
+          ],
         },
         {
-          type: 'doc',
-          id: 'supplemental/auth-service-login-jwt',
-          label: 'Auth Service: Login dan JWT',
+          type: 'category',
+          label: 'Security',
+          link: {
+            type: 'generated-index',
+            title: 'Security',
+            description:
+              'Lapisan keamanan dasar yang menambahkan login JWT dan verifikasi token ke arsitektur microservices Go yang sudah ada.',
+          },
+          items: [
+            {
+              type: 'doc',
+              id: 'supplemental/auth-jwt-overview',
+              label: 'Autentikasi JWT: Gambaran Umum',
+            },
+            {
+              type: 'doc',
+              id: 'supplemental/auth-service-login-jwt',
+              label: 'Auth Service: Login dan JWT',
+            },
+            {
+              type: 'doc',
+              id: 'supplemental/api-gateway-jwt-verification',
+              label: 'API Gateway: Verifikasi JWT',
+            },
+          ],
         },
         {
-          type: 'doc',
-          id: 'supplemental/api-gateway-jwt-verification',
-          label: 'API Gateway: Verifikasi JWT',
+          type: 'category',
+          label: 'Operations',
+          link: {
+            type: 'generated-index',
+            title: 'Operations',
+            description:
+              'Materi operasional dasar untuk membuat service lebih mudah dijalankan, diamati, dan dirawat.',
+          },
+          items: [
+            {
+              type: 'doc',
+              id: 'supplemental/structured-logging',
+              label: 'Structured Logging',
+            },
+            {
+              type: 'doc',
+              id: 'supplemental/database-migration',
+              label: 'Database Migration',
+            },
+          ],
         },
       ],
     },
