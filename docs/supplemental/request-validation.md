@@ -119,6 +119,63 @@ type LoginRequest struct {
 
 Handler hanya memastikan payload minimal valid. Proses cek password, pencocokan user, atau pembuatan JWT tetap menjadi tanggung jawab business service.
 
+## Alternatif Yang Lebih Rapi Untuk Production
+
+Contoh validasi manual di atas bagus untuk memahami konsep boundary validation. Tetapi pada project yang lebih serius, pola seperti ini cepat menjadi repetitif karena setiap handler harus terus menulis banyak `if req.Field == ...`.
+
+Pendekatan yang lebih rapi adalah memakai validator berbasis struct tags, misalnya `go-playground/validator`. Dengan pola ini:
+
+- rule validasi ditaruh di struct request
+- handler cukup parse body lalu memanggil validator
+- format validasi menjadi lebih konsisten antar endpoint
+
+Contoh request struct:
+
+```go
+type LoginRequest struct {
+    Email    string `json:"email" validate:"required,email"`
+    Password string `json:"password" validate:"required,min=6"`
+}
+
+type CreateOrderRequest struct {
+    ProductID int `json:"product_id" validate:"required,gt=0"`
+    Quantity  int `json:"quantity" validate:"required,gt=0"`
+}
+```
+
+Lalu siapkan validator terpusat:
+
+```go
+var validate = validator.New()
+```
+
+Contoh handler yang lebih ringkas:
+
+```go
+func LoginHandler(c *fiber.Ctx) error {
+    var req LoginRequest
+
+    if err := c.BodyParser(&req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "message": "body tidak valid",
+        })
+    }
+
+    if err := validate.Struct(req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "message": "payload tidak valid",
+            "errors":  err.Error(),
+        })
+    }
+
+    return authService.Login(c.Context(), req.Email, req.Password)
+}
+```
+
+Dengan pola ini, handler tidak perlu mengecek field satu per satu terus-menerus. Boundary validation tetap terjadi di awal request, tetapi implementasinya lebih scalable saat jumlah endpoint bertambah.
+
+Untuk kebutuhan course ini, contoh manual tetap penting karena paling mudah dipahami. Tetapi siswa juga perlu tahu bahwa pada codebase production, pendekatan validator berbasis struct tags biasanya lebih rapi dan lebih mudah dipelihara.
+
 ## Request Validation vs Business Validation
 
 Request validation menjawab pertanyaan: "apakah payload ini bisa diproses?"
