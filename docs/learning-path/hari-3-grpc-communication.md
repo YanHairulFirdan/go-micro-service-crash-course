@@ -66,7 +66,8 @@ func (s *ProductGRPCServer) CheckStock(ctx context.Context, req *pb.CheckStockRe
 }
 
 // DecreaseStock tidak dipanggil langsung dari Order Service.
-// Pengurangan stok akan dipicu lewat event order.created di Hari 4.
+// Pada Hari 4, pengurangan stok akan dipicu setelah order dikonfirmasi
+// dan event status confirmed dikirim lewat Kafka.
 func (s *ProductGRPCServer) UpdateStock(ctx context.Context, req *pb.UpdateStockRequest) (*pb.UpdateStockResponse, error) {
     err := s.productSvc.CheckAndUpdateStock(uint(req.ProductId), int(req.Quantity))
     if err != nil {
@@ -307,21 +308,24 @@ func (s *orderService) CreateOrder(req *model.CreateOrderRequest) (*model.Order,
     totalPrice := productDetail.Price * float64(req.Quantity)
 
     // LANGKAH 4: Simpan order ke database
-    // Pada materi ini order langsung dianggap confirmed setelah stok lolos validasi.
+    // Pada tahap ini order masih berstatus pending.
+    // Perubahan status ke confirmed dan publish event Kafka
+    // akan ditambahkan pada Hari 4.
     order := &model.Order{
         ProductID:  req.ProductID,
         Quantity:   req.Quantity,
         TotalPrice: totalPrice,
-        Status:     model.StatusConfirmed,
+        Status:     model.StatusPending,
     }
 
     if err := s.repo.Create(order); err != nil {
         return nil, errors.New("gagal menyimpan order")
     }
 
-    // CATATAN: Sampai titik ini stok belum dikurangi.
-    // Pada Hari 4, order-service akan publish event order.created ke Kafka,
-    // lalu product-service yang mengurangi stok secara asynchronous.
+    // CATATAN: Sampai titik ini stok belum dikurangi dan order masih pending.
+    // Pada Hari 4, kita akan menambahkan endpoint konfirmasi order,
+    // mengubah status order menjadi confirmed,
+    // lalu mempublish event Kafka agar product-service bisa memproses pengurangan stok secara asynchronous.
     return order, nil
 }
 
@@ -434,7 +438,10 @@ func (h *OrderHandler) GetAll(c fiber.Ctx) error {
 }
 
 func (h *OrderHandler) GetByID(c fiber.Ctx) error {
-    id, _ := strconv.ParseUint(c.Params("id"), 10, 32)
+    id, err := strconv.ParseUint(c.Params("id"), 10, 32)
+    if err != nil {
+        return c.Status(400).JSON(fiber.Map{"error": "id tidak valid"})
+    }
     order, err := h.svc.GetOrderByID(uint(id))
     if err != nil {
         return c.Status(404).JSON(fiber.Map{"error": err.Error()})
@@ -513,10 +520,12 @@ func main() {
 
 > **✅ Checkpoint Hari 3:** gRPC server berjalan di Product Service (port 9091). Order Service bisa memanggil Product Service via gRPC untuk validasi stok. Dua server (HTTP + gRPC) berjalan bersamaan di Product Service.
 
+Pada checkpoint ini, order yang baru dibuat masih berstatus `pending`. Alur perubahan status ke `confirmed` dan integrasi Kafka untuk trigger proses lanjutan akan dibahas di Hari 4.
+
 ---
 
 ## Hari 4 — Kafka Event Streaming
 
 **Cakupan:** Producer · Consumer · Event-Driven Architecture · Async Processing
 
-Kafka digunakan untuk komunikasi asinkron. Ketika order berhasil disimpan, `order-service` akan mempublish event `order.created` ke Kafka. `product-service` mengonsumsi event itu untuk mengurangi stok tanpa membuat `order-service` menunggu. Ini adalah pola event-driven yang sangat populer di microservices.
+Kafka digunakan untuk komunikasi asinkron. Setelah alur konfirmasi order ditambahkan, `order-service` akan mempublish event saat status order berubah menjadi `confirmed`. `product-service` mengonsumsi event itu untuk mengurangi stok tanpa membuat `order-service` menunggu. Ini adalah pola event-driven yang sangat populer di microservices.

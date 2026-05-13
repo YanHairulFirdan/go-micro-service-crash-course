@@ -179,65 +179,66 @@ type UpdateStockRequest struct {
 package repository
 
 import (
-    "github.com/yourusername/product-service/internal/model"
-    "gorm.io/gorm"
+	"github.com/yourusername/product-service/internal/model"
+	"gorm.io/gorm"
 )
 
-// ProductRepository mendefinisikan kontrak operasi database.
-// Menggunakan interface agar mudah di-mock saat testing.
 type ProductRepository interface {
-    Create(product *model.Product) error
-    FindAll() ([]model.Product, error)
-    FindByID(id uint) (*model.Product, error)
-    Update(product *model.Product) error
-    Delete(id uint) error
-    UpdateStock(id uint, quantity int) error
+	Create(product *model.Product) error
+	FindAll() ([]model.Product, error)
+	FindByID(id uint) (*model.Product, error)
+	Update(product *model.Product) error
+	Delete(id uint) error
+	UpdateStock(id uint, quantity int) error
+	DecreaseStock(id uint, quantity int) error
 }
 
 type productRepository struct {
-    db *gorm.DB
+	db *gorm.DB
 }
 
 func NewProductRepository(db *gorm.DB) ProductRepository {
-    return &productRepository{db: db}
+	return &productRepository{db: db}
 }
 
 func (r *productRepository) Create(product *model.Product) error {
-    // GORM: INSERT INTO products (...) VALUES (...)
-    return r.db.Create(product).Error
+	return r.db.Create(product).Error
 }
 
 func (r *productRepository) FindAll() ([]model.Product, error) {
-    var products []model.Product
-    // GORM: SELECT * FROM products WHERE deleted_at IS NULL
-    err := r.db.Find(&products).Error
-    return products, err
+	var products []model.Product
+
+	err := r.db.Find(&products).Error
+
+	return products, err
 }
 
 func (r *productRepository) FindByID(id uint) (*model.Product, error) {
-    var product model.Product
-    // GORM: SELECT * FROM products WHERE id = ? AND deleted_at IS NULL
-    err := r.db.First(&product, id).Error
-    if err != nil {
-        return nil, err
-    }
-    return &product, nil
+	var product model.Product
+
+	err := r.db.First(&product, id).Error
+
+	if err != nil {
+		return nil, err
+	}
+
+	return &product, err
 }
 
 func (r *productRepository) Update(product *model.Product) error {
-    // GORM: UPDATE products SET ... WHERE id = ?
-    return r.db.Save(product).Error
+	return r.db.Save(product).Error
 }
 
 func (r *productRepository) Delete(id uint) error {
-    // GORM soft delete: UPDATE products SET deleted_at = NOW() WHERE id = ?
-    return r.db.Delete(&model.Product{}, id).Error
+	return r.db.Delete(&model.Product{}, id).Error
 }
 
-func (r *productRepository) UpdateStock(id uint, quantity int) error {
-    // Update stok dengan aman menggunakan atomic operation
-    return r.db.Model(&model.Product{}).Where("id = ?", id).
-        Update("stock", gorm.Expr("stock + ?", quantity)).Error
+func (r *productRepository) UpdateStock(id uint, quantiy int) error {
+	return r.db.Model(&model.Product{}).Where("id = ?", id).Update("stock", gorm.Expr("stock + ?", quantiy)).Error
+}
+
+func (r *productRepository) DecreaseStock(id uint, quantity int) error {
+	return r.db.Model(&model.Product{}).Where("id = ?", id).Update("stock", gorm.Expr("stock - ?", quantity)).Error
 }
 ```
 
@@ -251,90 +252,119 @@ func (r *productRepository) UpdateStock(id uint, quantity int) error {
 package service
 
 import (
-    "errors"
+	"errors"
 
-    "github.com/yourusername/product-service/internal/model"
-    "github.com/yourusername/product-service/internal/repository"
-    "gorm.io/gorm"
+	"github.com/yourusername/product-service/internal/model"
+	"github.com/yourusername/product-service/internal/repository"
+	"gorm.io/gorm"
 )
 
 type ProductService interface {
-    CreateProduct(req *model.CreateProductRequest) (*model.Product, error)
-    GetAllProducts() ([]model.Product, error)
-    GetProductByID(id uint) (*model.Product, error)
-    UpdateProduct(id uint, req *model.CreateProductRequest) (*model.Product, error)
-    DeleteProduct(id uint) error
-    CheckAndUpdateStock(id uint, quantity int) error
+	CreateProduct(req *model.CreateProductRequest) (*model.Product, error)
+	GetAllProducts() ([]model.Product, error)
+	GetProductByID(id uint) (*model.Product, error)
+	UpdateProduct(id uint, req *model.CreateProductRequest) (*model.Product, error)
+	DeleteProduct(id uint) error
+	CheckAndUpdateStock(id uint, quantity int) error
+	CheckAndDecreaseStock(id uint, quantity int) error
 }
 
 type productService struct {
-    repo repository.ProductRepository
+	repo repository.ProductRepository
 }
 
-func NewProductService(repo repository.ProductRepository) ProductService {
-    return &productService{repo: repo}
+func NewProductService(r repository.ProductRepository) ProductService {
+	return &productService{repo: r}
 }
 
 func (s *productService) CreateProduct(req *model.CreateProductRequest) (*model.Product, error) {
-    product := &model.Product{
-        Name:        req.Name,
-        Description: req.Description,
-        Price:       req.Price,
-        Stock:       req.Stock,
-    }
-    if err := s.repo.Create(product); err != nil {
-        return nil, errors.New("gagal membuat produk")
-    }
-    return product, nil
+	product := &model.Product{
+		Name:        req.Name,
+		Description: req.Description,
+		Price:       req.Price,
+		Stock:       req.Stock,
+	}
+
+	if err := s.repo.Create(product); err != nil {
+		return nil, errors.New("Error Creating Product")
+	}
+
+	return product, nil
 }
 
 func (s *productService) GetAllProducts() ([]model.Product, error) {
-    return s.repo.FindAll()
+	return s.repo.FindAll()
 }
 
 func (s *productService) GetProductByID(id uint) (*model.Product, error) {
-    product, err := s.repo.FindByID(id)
-    if err != nil {
-        if errors.Is(err, gorm.ErrRecordNotFound) {
-            return nil, errors.New("produk tidak ditemukan")
-        }
-        return nil, err
-    }
-    return product, nil
+	product, err := s.repo.FindByID(id)
+
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, errors.New("Product tidak ditemukan")
+		}
+
+		return nil, err
+	}
+
+	return product, nil
 }
 
 func (s *productService) UpdateProduct(id uint, req *model.CreateProductRequest) (*model.Product, error) {
-    product, err := s.GetProductByID(id)
-    if err != nil {
-        return nil, err
-    }
-    product.Name = req.Name
-    product.Description = req.Description
-    product.Price = req.Price
-    product.Stock = req.Stock
-    if err := s.repo.Update(product); err != nil {
-        return nil, errors.New("gagal update produk")
-    }
-    return product, nil
+	product, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return nil, err
+	}
+
+	product.Name = req.Name
+	product.Description = req.Description
+	product.Price = req.Price
+	product.Stock = req.Stock
+
+	if err = s.repo.Update(product); err != nil {
+		return nil, errors.New("Gagal update product")
+	}
+
+	return product, nil
 }
 
 func (s *productService) DeleteProduct(id uint) error {
-    _, err := s.GetProductByID(id)
-    if err != nil {
-        return err
-    }
-    return s.repo.Delete(id)
+	_, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return err
+	}
+
+	return s.repo.Delete(id)
 }
 
 func (s *productService) CheckAndUpdateStock(id uint, quantity int) error {
-    product, err := s.GetProductByID(id)
-    if err != nil {
-        return err
-    }
-    if product.Stock < quantity {
-        return errors.New("stok tidak mencukupi")
-    }
-    return s.repo.UpdateStock(id, -quantity)
+	product, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return err
+	}
+
+	if product.Stock < quantity {
+		return errors.New("stock tidak mencukupi")
+	}
+
+	return s.repo.UpdateStock(id, quantity)
+}
+
+func (s *productService) CheckAndDecreaseStock(id uint, quantity int) error {
+	product, err := s.repo.FindByID(id)
+
+	if err != nil {
+		return err
+	}
+
+	if product.Stock < quantity {
+		return errors.New("stock tidak mencukupi")
+	}
+
+	return s.repo.DecreaseStock(id, quantity)
 }
 ```
 

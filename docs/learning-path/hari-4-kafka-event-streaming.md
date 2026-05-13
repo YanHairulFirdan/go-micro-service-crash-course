@@ -12,26 +12,27 @@ pagination_next: learning-path/hari-5-api-gateway
 
 ## 4.1 Konsep Kafka dalam Sistem Kita
 
-Setelah Hari 3, order sudah bisa dibuat tetapi stok belum berkurang. Hari ini kita menambahkan trigger asynchronous yang sama seperti pada panduan NestJS: setelah order tersimpan, `order-service` mempublish event `order.created`, lalu `product-service` memproses event itu untuk mengurangi stok.
+Setelah Hari 3, order sudah bisa dibuat tetapi statusnya masih `pending` dan stok belum berkurang. Hari ini kita menambahkan alur event-driven untuk konfirmasi order. Saat order dikonfirmasi menjadi `confirmed`, `order-service` mempublish event ke Kafka, lalu `product-service` bereaksi terhadap event itu untuk mengurangi stok secara asynchronous.
 
 ```
 Order Service          Kafka Broker            Product Service
       │                     │                        │
+      │── Confirm Order ───►│                        │
+      │                     │                        │
       │── Publish ─────────►│  Topic: order-events   │
-      │   {event_name:      │                        │
-      │    order.created,   │                        │
-      │    order_id,        │                        │
+      │   {order_id,        │                        │
       │    product_id,      │──── Consume ──────────►│
       │    quantity,        │                        │
-      │    status}          │                   Kurangi stok di DB
+      │    status:          │                   Kurangi stok di DB
+      │    confirmed}       │
       │                     │
       │ (tidak menunggu)
       ▼
- Return order
+ Return response
  ke client
 
 Topic: order-events
-Trigger stok: event `order.created`
+Trigger stok: event dengan `status = confirmed`
 Partition: 1  (untuk simplisitas)
 Message Key: order_id  (agar ordered per order)
 ```
@@ -62,14 +63,6 @@ type OrderProducer struct {
     writer *kafka.Writer
 }
 
-type OrderEventPayload struct {
-    EventName string `json:"event_name"`
-    OrderID   uint   `json:"order_id"`
-    ProductID uint   `json:"product_id"`
-    Quantity  int    `json:"quantity"`
-    Status    string `json:"status"`
-}
-
 func NewOrderProducer(brokerAddr string) *OrderProducer {
     writer := &kafka.Writer{
         Addr:     kafka.TCP(brokerAddr),
@@ -81,7 +74,7 @@ func NewOrderProducer(brokerAddr string) *OrderProducer {
     return &OrderProducer{writer: writer}
 }
 
-func (p *OrderProducer) PublishOrderCreated(event OrderEventPayload) error {
+func (p *OrderProducer) PublishOrderEvent(event model.OrderEvent) error {
     payload, err := json.Marshal(event)
     if err != nil {
         return fmt.Errorf("gagal marshal event: %w", err)
@@ -98,8 +91,8 @@ func (p *OrderProducer) PublishOrderCreated(event OrderEventPayload) error {
         return fmt.Errorf("gagal publish ke kafka: %w", err)
     }
 
-    log.Printf("Event published: %s OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
-        event.EventName, event.OrderID, event.ProductID, event.Quantity, event.Status)
+    log.Printf("Event published: OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
+        event.OrderID, event.ProductID, event.Quantity, event.Status)
 
     return nil
 }
@@ -120,84 +113,224 @@ package service
 
 import (
     "errors"
+    "log"
 
     grpcclient "github.com/yourusername/order-service/internal/grpc"
-    kafkapkg   "github.com/yourusername/order-service/internal/kafka"
+    "github.com/yourusername/order-service/internal/kafka"
     "github.com/yourusername/order-service/internal/model"
     "github.com/yourusername/order-service/internal/repository"
+    "google.golang.org/grpc/codes"
+    "google.golang.org/grpc/status"
 )
+
+type OrderService interface {
+    CreateOrder(req *model.CreateOrderRequest) (*model.Order, error)
+    GetOrderByID(id uint) (*model.Order, error)
+    GetAllOrders() ([]model.Order, error)
+    UpdateOrderStatus(id uint, status model.OrderStatus) error
+}
 
 type orderService struct {
     repo          repository.OrderRepository
     productClient *grpcclient.ProductClient
-    producer      *kafkapkg.OrderProducer // BARU: Kafka producer
+    producer      *kafka.OrderProducer
 }
 
 func NewOrderService(
-    repo     repository.OrderRepository,
-    pc       *grpcclient.ProductClient,
-    producer *kafkapkg.OrderProducer,
+    repo repository.OrderRepository,
+    productClient *grpcclient.ProductClient,
+    producer *kafka.OrderProducer,
 ) OrderService {
-    return &orderService{repo: repo, productClient: pc, producer: producer}
+    return &orderService{repo: repo, productClient: productClient, producer: producer}
 }
 
 func (s *orderService) CreateOrder(req *model.CreateOrderRequest) (*model.Order, error) {
-    // 1. Cek stok via gRPC
     available, msg, err := s.productClient.CheckStock(uint64(req.ProductID), int32(req.Quantity))
-    if err != nil || !available {
-        if err == nil {
-            err = errors.New(msg)
+
+    if err != nil {
+        st, ok := status.FromError(err)
+
+        if ok {
+            switch st.Code() {
+            case codes.NotFound:
+                return nil, errors.New("product tidak ditemukan")
+            case codes.Unavailable:
+                return nil, errors.New("product service tidak tersedia")
+            default:
+                return nil, errors.New("error dari product service: " + st.Message())
+            }
         }
-        return nil, err
+
+        return nil, errors.New("gagal menghubungi product service")
     }
 
-    // 2. Ambil harga produk
+    if !available {
+        return nil, errors.New(msg)
+    }
+
     productDetail, err := s.productClient.GetProduct(uint64(req.ProductID))
     if err != nil {
-        return nil, errors.New("gagal ambil detail produk")
+        return nil, errors.New("gagal mengambil detail product")
     }
 
-    // 3. Buat order
-    // Karena stok sudah lolos validasi sinkron via gRPC,
-    // order langsung disimpan sebagai confirmed.
     order := &model.Order{
         ProductID:  req.ProductID,
-        Quantity:   req.Quantity,
+        Quantity:   int(req.Quantity),
         TotalPrice: productDetail.Price * float64(req.Quantity),
-        Status:     model.StatusConfirmed,
+        Status:     model.StatusPending,
     }
 
     if err := s.repo.Create(order); err != nil {
-        return nil, errors.New("gagal simpan order")
+        return nil, errors.New("gagal menyimpan order")
     }
 
-    // 4. Publish event order.created ke Kafka setelah order tersimpan
-    event := kafkapkg.OrderEventPayload{
-        EventName: "order.created",
+    return order, nil
+}
+
+func (s *orderService) GetOrderByID(id uint) (*model.Order, error) {
+    return s.repo.FindByID(id)
+}
+
+func (s *orderService) GetAllOrders() ([]model.Order, error) {
+    return s.repo.FindAll()
+}
+
+func (s *orderService) UpdateOrderStatus(id uint, status model.OrderStatus) error {
+    order, err := s.GetOrderByID(id)
+
+    if err != nil {
+        return err
+    }
+
+    if order.Status == model.StatusConfirmed {
+        return errors.New("Order already confirmed")
+    }
+
+    err = s.repo.UpdateStatus(id, status)
+
+    if err != nil {
+        return err
+    }
+
+    event := model.OrderEvent{
         OrderID:   order.ID,
         ProductID: order.ProductID,
         Quantity:  order.Quantity,
-        Status:    string(order.Status),
+        Status:    status,
     }
 
-    // Publish di goroutine agar tidak blocking response
     go func() {
-        if err := s.producer.PublishOrderCreated(event); err != nil {
-            // Log error tapi jangan gagalkan order
-            // Di production: retry logic atau dead letter queue
-            // `_ = err` artinya nilai error sengaja diabaikan setelah titik ini,
-            // supaya compiler tahu perilaku ini memang disengaja.
+        if err := s.producer.PublishOrderEvent(event); err != nil {
+            log.Printf("error: %v", err)
             _ = err
         }
     }()
 
-    return order, nil
+    return nil
 }
 ```
 
 ---
 
-## 4.4 Kafka Consumer di Product Service
+Dengan perubahan ini, pembuatan order tetap menghasilkan status `pending`. Perubahan status ke `confirmed` dilakukan melalui endpoint terpisah, lalu event Kafka dipublish untuk memicu proses lanjutan seperti pengurangan stok.
+
+## 4.4 Update Order Handler untuk Endpoint Confirm
+
+**File: `internal/handler/order_handler.go` (diupdate)**
+
+```go
+package handler
+
+import (
+    "strconv"
+
+    "github.com/yourusername/order-service/internal/model"
+    "github.com/yourusername/order-service/internal/service"
+    "github.com/gofiber/fiber/v3"
+)
+
+type OrderHandler struct {
+    svc service.OrderService
+}
+
+func NewOrderHandler(svc service.OrderService) *OrderHandler {
+    return &OrderHandler{svc: svc}
+}
+
+func (h *OrderHandler) RegisterRoutes(router fiber.Router) {
+    orders := router.Group("/orders")
+    orders.Get("/", h.GetAll)
+    orders.Get("/:id", h.GetByID)
+    orders.Post("/", h.Create)
+    orders.Put("/:id/confirmed", h.Confirmed)
+}
+
+func (h *OrderHandler) GetAll(c fiber.Ctx) error {
+    orders, err := h.svc.GetAllOrders()
+
+    if err != nil {
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.JSON(fiber.Map{"data": orders})
+}
+
+func (h *OrderHandler) GetByID(c fiber.Ctx) error {
+    id, err := strconv.ParseUint(c.Params("id"), 10, 32)
+
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id tidak valid"})
+    }
+
+    order, err := h.svc.GetOrderByID(uint(id))
+
+    if err != nil {
+        return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.JSON(fiber.Map{"data": order})
+}
+
+func (h *OrderHandler) Create(c fiber.Ctx) error {
+    var req model.CreateOrderRequest
+
+    if err := c.Bind().Body(&req); err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "request tidak valid"})
+    }
+
+    order, err := h.svc.CreateOrder(&req)
+
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.Status(fiber.StatusCreated).JSON(fiber.Map{"data": order, "message": "order berhasil dibuat"})
+}
+
+func (h *OrderHandler) Confirmed(c fiber.Ctx) error {
+    id, err := strconv.ParseUint(c.Params("id"), 10, 32)
+
+    if err != nil {
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "id tidak valid"})
+    }
+
+    err = h.svc.UpdateOrderStatus(uint(id), model.StatusConfirmed)
+
+    if err != nil {
+        if err.Error() == "order tidak ditemukan" {
+            return c.Status(fiber.StatusNotFound).JSON(fiber.Map{"error": err.Error()})
+        }
+
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": err.Error()})
+    }
+
+    return c.Status(fiber.StatusOK).JSON(fiber.Map{"status": "ok", "message": "order updated successfully"})
+}
+```
+
+---
+
+## 4.5 Kafka Consumer di Product Service
 
 **File: `internal/kafka/consumer.go` (product-service)**
 
@@ -216,7 +349,6 @@ import (
 const TopicOrderEvents = "order-events"
 
 type OrderEventPayload struct {
-    EventName string `json:"event_name"`
     OrderID   uint   `json:"order_id"`
     ProductID uint   `json:"product_id"`
     Quantity  int    `json:"quantity"`
@@ -263,11 +395,11 @@ func (c *OrderConsumer) StartConsuming(ctx context.Context) {
                 continue
             }
 
-            log.Printf("Terima event: %s OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
-                event.EventName, event.OrderID, event.ProductID, event.Quantity, event.Status)
+            log.Printf("Terima event: OrderID=%d, ProductID=%d, Qty=%d, Status=%s",
+                event.OrderID, event.ProductID, event.Quantity, event.Status)
 
-            // Trigger pengurangan stok ditentukan oleh nama event.
-            if event.EventName == "order.created" {
+            // Kurangi stok hanya ketika order sudah confirmed.
+            if event.Status == "confirmed" {
                 if err := c.productSvc.CheckAndUpdateStock(event.ProductID, event.Quantity); err != nil {
                     log.Printf("Gagal update stok untuk OrderID=%d: %v", event.OrderID, err)
                     // Di production: kirim ke dead letter topic atau alert
@@ -287,7 +419,24 @@ func (c *OrderConsumer) Close() {
 
 ---
 
-## 4.5 Update `main.go` Product Service (tambah Kafka Consumer)
+## 4.6 Update `main.go` Order Service dan Product Service
+
+**File: `cmd/server/main.go` (order-service)**
+
+```go
+// Tambahkan di main() order-service setelah setup gRPC client:
+
+kafkaBroker := os.Getenv("KAFKA_BROKER") // "kafka:9092"
+
+producer := kafka.NewOrderProducer(kafkaBroker)
+defer producer.Close()
+
+orderRepo := repository.NewOrderRepository(cfg.DB)
+orderSvc := service.NewOrderService(orderRepo, productClient, producer)
+orderHandler := handler.NewOrderHandler(orderSvc)
+```
+
+**File: `cmd/server/main.go` (product-service)**
 
 ```go
 // Tambahkan di main() product-service setelah setup service:
@@ -309,7 +458,7 @@ go consumer.StartConsuming(ctx)
 
 ---
 
-> **✅ Checkpoint Hari 4:** Setelah order berhasil disimpan, `order-service` publish event `order.created` ke Kafka. `product-service` consume event tersebut dan mengurangi stok secara asinkron. Ini adalah pola event-driven yang decoupled.
+> **✅ Checkpoint Hari 4:** Order dibuat dengan status `pending`, lalu dapat dikonfirmasi melalui endpoint `PUT /orders/:id/confirmed`. Saat status berubah menjadi `confirmed`, `order-service` mempublish event ke Kafka dan `product-service` mengurangi stok secara asynchronous. Ini adalah pola event-driven yang decoupled.
 
 ---
 

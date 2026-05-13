@@ -127,6 +127,8 @@ message GetOrderResponse {
 }
 ```
 
+> Pada Hari 3 dan Hari 4, `order/order.proto` ini belum dipakai langsung karena fokus materinya masih pada komunikasi `order-service` ke `product-service` via gRPC, lalu event Kafka. Definisi ini disiapkan lebih awal agar kontrak data order sudah ada saat nanti service lain perlu mengambil data order via gRPC.
+
 **File: `Makefile` (di `proto-definitions/`)**
 
 ```makefile
